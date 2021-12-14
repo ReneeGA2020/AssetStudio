@@ -18,11 +18,14 @@ using System.Timers;
 using System.Windows.Forms;
 using static AssetStudioGUI.Studio;
 using Font = AssetStudio.Font;
-using OpenTK.Graphics;
-
+#if NET472
+using Vector3 = OpenTK.Vector3;
+using Vector4 = OpenTK.Vector4;
+#else
 using Vector3 = OpenTK.Mathematics.Vector3;
 using Vector4 = OpenTK.Mathematics.Vector4;
 using Matrix4 = OpenTK.Mathematics.Matrix4;
+#endif
 
 namespace AssetStudioGUI
 {
@@ -49,14 +52,14 @@ namespace AssetStudioGUI
         private bool glControlLoaded;
         private int mdx, mdy;
         private bool lmdown, rmdown;
-        private ProgramHandle pgmID, pgmColorID, pgmBlackID;
+        private int pgmID, pgmColorID, pgmBlackID;
         private int attributeVertexPosition;
         private int attributeNormalDirection;
         private int attributeVertexColor;
         private int uniformModelMatrix;
         private int uniformViewMatrix;
         private int uniformProjMatrix;
-        private VertexArrayHandle vao;
+        private int vao;
         private Vector3[] vertexData;
         private Vector3[] normalData;
         private Vector3[] normal2Data;
@@ -1876,20 +1879,20 @@ namespace AssetStudioGUI
         private void InitOpenTK()
         {
             ChangeGLSize(glControl1.Size);
-            GL.ClearColor(System.Drawing.Color.CadetBlue.R, System.Drawing.Color.CadetBlue.G, System.Drawing.Color.CadetBlue.B, System.Drawing.Color.CadetBlue.A);
+            GL.ClearColor(System.Drawing.Color.CadetBlue);
             pgmID = GL.CreateProgram();
-            LoadShader("vs", ShaderType.VertexShader, pgmID.Handle, out int vsID);
-            LoadShader("fs", ShaderType.FragmentShader, pgmID.Handle, out int fsID);
+            LoadShader("vs", ShaderType.VertexShader, pgmID, out int vsID);
+            LoadShader("fs", ShaderType.FragmentShader, pgmID, out int fsID);
             GL.LinkProgram(pgmID);
 
             pgmColorID = GL.CreateProgram();
-            LoadShader("vs", ShaderType.VertexShader, pgmColorID.Handle, out vsID);
-            LoadShader("fsColor", ShaderType.FragmentShader, pgmColorID.Handle, out fsID);
+            LoadShader("vs", ShaderType.VertexShader, pgmColorID, out vsID);
+            LoadShader("fsColor", ShaderType.FragmentShader, pgmColorID, out fsID);
             GL.LinkProgram(pgmColorID);
 
             pgmBlackID = GL.CreateProgram();
-            LoadShader("vs", ShaderType.VertexShader, pgmBlackID.Handle, out vsID);
-            LoadShader("fsBlack", ShaderType.FragmentShader, pgmBlackID.Handle, out fsID);
+            LoadShader("vs", ShaderType.VertexShader, pgmBlackID, out vsID);
+            LoadShader("fsBlack", ShaderType.FragmentShader, pgmBlackID, out fsID);
             GL.LinkProgram(pgmBlackID);
 
             attributeVertexPosition = GL.GetAttribLocation(pgmID, "vertexPosition");
@@ -1902,20 +1905,19 @@ namespace AssetStudioGUI
 
         private static void LoadShader(string filename, ShaderType type, int program, out int address)
         {
-            var addressHandler = GL.CreateShader(type);
+            address = GL.CreateShader(type);
             var str = (string)Properties.Resources.ResourceManager.GetObject(filename);
-            GL.ShaderSource(addressHandler, str);
-            GL.CompileShader(addressHandler);
-            GL.AttachShader((ProgramHandle)program, addressHandler);
-            GL.DeleteShader(addressHandler);
-            address = addressHandler.Handle;
+            GL.ShaderSource(address, str);
+            GL.CompileShader(address);
+            GL.AttachShader(program, address);
+            GL.DeleteShader(address);
         }
 
         private static void CreateVBO(out int vboAddress, Vector3[] data, int address)
         {
             GL.GenBuffers(1, out vboAddress);
-            GL.BindBuffer(BufferTargetARB.ArrayBuffer, vboAddress);
-            GL.BufferData(BufferTargetARB.ArrayBuffer,
+            GL.BindBuffer(BufferTarget.ArrayBuffer, vboAddress);
+            GL.BufferData(BufferTarget.ArrayBuffer,
                                     (IntPtr)(data.Length * Vector3.SizeInBytes),
                                     data,
                                     BufferUsageHint.StaticDraw);
